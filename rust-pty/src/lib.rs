@@ -211,6 +211,17 @@ impl Pty {
                     match rdr.read(&mut buf) {
                         Ok(0) => break,
                         Ok(n) => { let _ = tx.send(Msg::Data(buf[..n].to_vec())); }
+                        // FIX (bun-pty deaf-PTY bug): a transient read error
+                        // (EINTR from a signal, EWOULDBLOCK) must NOT be treated
+                        // as EOF. The old `Err(_) => break` ended the reader on
+                        // any error → Msg::End → exited=true → bun_pty_write
+                        // early-returns CHILD_EXITED forever, permanently deafening
+                        // input while the child is still alive. Retry instead.
+                        Err(ref e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+                        Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                            std::thread::sleep(std::time::Duration::from_millis(2));
+                            continue;
+                        }
                         Err(_) => break,
                     }
                 }
@@ -223,7 +234,24 @@ impl Pty {
             let mut wtr = master.lock().unwrap().take_writer()?;
             thread::spawn(move || {
                 while let Ok((data, len)) = rx_w.recv() {
-                    if wtr.write_all(&data[..len]).is_err() { break; }
+                    // Don't let one (possibly transient) write error kill the
+                    // writer thread forever — that would silently drop ALL
+                    // subsequent input. Retry transient errors; on a fatal one,
+                    // drop just this chunk but keep serving later writes.
+                    let mut buf = &data[..len];
+                    while !buf.is_empty() {
+                        match wtr.write(buf) {
+                            Ok(0) => break,
+                            Ok(n) => buf = &buf[n..],
+                            Err(ref e)
+                                if e.kind() == std::io::ErrorKind::Interrupted
+                                    || e.kind() == std::io::ErrorKind::WouldBlock =>
+                            {
+                                std::thread::sleep(std::time::Duration::from_millis(2));
+                            }
+                            Err(_) => break,
+                        }
+                    }
                     let _ = wtr.flush();
                 }
             });
