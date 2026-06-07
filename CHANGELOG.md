@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.9] - 2026-06-07
+
+### Fixed
+- Don't treat transient PTY read/write errors (EINTR/EWOULDBLOCK) as EOF (#42)
+  - Reader thread now retries transient read errors instead of treating them as EOF. Previously a single `EINTR` (e.g. from a delivered `SIGCHLD` in a signal-heavy host) or `EWOULDBLOCK` ended the reader, which flipped the PTY into an "exited" state — after which `bun_pty_write` silently dropped all input while the child was still alive (a "deaf" PTY)
+  - Writer thread now retries transient write errors and drops only the current chunk on a fatal error, instead of permanently terminating and dropping all subsequent input
+  - Fixes #41
+
 ## [0.4.8] - 2026-01-15
 
 ### Fixed
