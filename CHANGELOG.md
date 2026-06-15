@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.10] - 2026-06-15
+
+### Added
+- musl libc support for Alpine Linux and other musl-based distros (#40)
+  - Ship pre-built musl variants (`librust_pty_musl.so` / `librust_pty_arm64_musl.so`) alongside existing glibc builds via `cargo-zigbuild` with `-C target-feature=-crt-static`
+  - Detect musl at runtime via `/proc/self/maps` and load the appropriate `.so`
+  - Add `build-musl-lib` + `test-musl` CI jobs that cross-compile on Ubuntu and run the resulting artifact in `alpine:3.23`
+  - Fixes #39
+
 ## [0.4.9] - 2026-06-07
 
 ### Fixed
