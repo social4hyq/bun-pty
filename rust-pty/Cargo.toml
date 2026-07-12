@@ -15,7 +15,16 @@ crate-type = ["cdylib"]
 
 [dependencies]
 # https://github.com/wezterm/wezterm/issues/6783
-portable-pty = { version = "0.8.1", features = ["serde_support"] }
+#
+# portable-pty 0.9.0 (crates.io) pins nix "0.28", which predates OHOS
+# support. nix 0.30+ added *-unknown-linux-ohos handling
+# (nix-rust/nix#2599/#2587/#2456). Cargo's [patch.crates-io] can't bump a
+# transitive dep to a different same-registry version ("patches must point
+# to different sources"), so — mirroring the same fix in the bun-pty
+# Homebrew formula (Formula/b/bun-pty.rb) — vendor/portable-pty-0.9.0/ is a
+# checked-in copy of the real crates.io 0.9.0 source with just its nix
+# requirement bumped from "0.28" to "0.31" in Cargo.toml.
+portable-pty = { path = "vendor/portable-pty-0.9.0", features = ["serde_support"] }
 lazy_static = "1.4"
 crossbeam = { version = "0.8.4", features = ["crossbeam-channel"] }
 serde = { version = "1.0", features = ["derive"] }
