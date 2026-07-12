@@ -48,6 +48,8 @@ function resolveLibPath(): string {
 	// bundler only includes the require() for the literal platform string
 	// matched at compile time, so this must be a standalone check rather than
 	// folded into the musl branch below.
+	// @ts-ignore - "openharmony" is a real Bun-on-OHOS platform value, but
+	// @types/node's Platform union doesn't include it.
 	if (process.platform === "openharmony") {
 		try {
 			// @ts-ignore - require returns path for binary files in Bun
@@ -85,7 +87,9 @@ function resolveLibPath(): string {
 	}
 
 	// Fallback: dynamic resolution for development scenarios
-	const platform = process.platform;
+	// Widened to string: @types/node's Platform union doesn't include
+	// "openharmony", which is a real Bun-on-OHOS value compared against below.
+	const platform: string = process.platform;
 	const arch = process.arch;
 
 	// Try both architecture-specific and generic filenames
