@@ -43,6 +43,21 @@ function resolveLibPath(): string {
 
 	const musl = isMusl();
 
+	// For OpenHarmony (OHOS): dedicated embedded variant, its own branch since
+	// process.platform reports 'openharmony' (not 'linux') — Bun's static
+	// bundler only includes the require() for the literal platform string
+	// matched at compile time, so this must be a standalone check rather than
+	// folded into the musl branch below.
+	if (process.platform === "openharmony") {
+		try {
+			// @ts-ignore - require returns path for binary files in Bun
+			const embeddedOhosPath = require(`../rust-pty/target/release/${process.arch === "arm64" ? "librust_pty_arm64_ohos.so" : "librust_pty_ohos.so"}`);
+			if (embeddedOhosPath) return embeddedOhosPath;
+		} catch {
+			// Not running as compiled binary, fall through to dynamic resolution
+		}
+	}
+
 	// For bun compile: use statically analyzable require with inline ternary.
 	// Bun evaluates process.platform and process.arch at compile time and only
 	// bundles the file for the target platform. The ternary MUST be inline
@@ -81,6 +96,10 @@ function resolveLibPath(): string {
 				: ["librust_pty.dylib"]
 			: platform === "win32"
 			? ["rust_pty.dll"]
+			: platform === "openharmony"
+			? arch === "arm64"
+				? ["librust_pty_arm64_ohos.so", "librust_pty_ohos.so"]
+				: ["librust_pty_ohos.so"]
 			: musl
 			? arch === "arm64"
 				? ["librust_pty_arm64_musl.so", "librust_pty_musl.so", "librust_pty_arm64.so", "librust_pty.so"]

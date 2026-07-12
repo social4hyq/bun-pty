@@ -99,8 +99,59 @@ jobs:
           files: out/*
           fail_on_unmatched_files: true
 
+  build-ohos:
+    name: Build aarch64-unknown-linux-ohos
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-ohos
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Setup OpenHarmony SDK
+        uses: Boshen/setup-ohos-sdk@edb865a89a712f1f15dbad932dfa9cfce849d95c # v1.0.0
+
+      - name: Configure OHOS linker
+        run: |
+          cat > /tmp/aarch64-linux-ohos-clang <<'WRAPPER'
+          #!/bin/sh
+          exec "${OHOS_SDK_NATIVE}/llvm/bin/clang" --target=aarch64-linux-ohos "$@"
+          WRAPPER
+          chmod +x /tmp/aarch64-linux-ohos-clang
+
+      - name: Build rust-pty (OHOS)
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_OHOS_LINKER: /tmp/aarch64-linux-ohos-clang
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_OHOS_RUSTFLAGS: -C link-arg=-fuse-ld=lld -C link-arg=-lm
+        run: |
+          cd rust-pty
+          cargo build --release --target aarch64-unknown-linux-ohos
+
+      - name: Collect + sign artefact
+        run: |
+          mkdir -p out
+          cp rust-pty/target/aarch64-unknown-linux-ohos/release/librust_pty.so out/librust_pty_arm64_ohos.so
+          python3 scripts/ohos/self-sign.py out/librust_pty_arm64_ohos.so
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: compiled-libs-aarch64-unknown-linux-ohos
+          path: out/*
+
+      - name: Upload to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: out/*
+          fail_on_unmatched_files: true
+
   publish:
-    needs: build-libs
+    needs: [build-libs, build-ohos]
     runs-on: ubuntu-latest
 
     steps:
@@ -135,4 +186,6 @@ jobs:
         run: bun run build:ts
 
       - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish

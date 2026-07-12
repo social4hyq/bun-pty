@@ -1,17 +1,17 @@
 {
-	"name": "bun-pty",
+	"name": "@ohos-ports/bun-pty",
 	"version": "0.4.10",
-	"description": "Cross-platform pseudoterminal (PTY) implementation for Bun with native performance",
+	"description": "Cross-platform pseudoterminal (PTY) implementation for Bun with native performance — OpenHarmony (OHOS) port, republished from sursaone/bun-pty",
 	"main": "./src/index.ts",
 	"types": "./dist/index.d.ts",
 	"type": "module",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/sursaone/bun-pty.git"
+		"url": "git+https://github.com/social4hyq/bun-pty.git"
 	},
-	"homepage": "https://github.com/sursaone/bun-pty#readme",
+	"homepage": "https://github.com/social4hyq/bun-pty#readme",
 	"bugs": {
-		"url": "https://github.com/sursaone/bun-pty/issues"
+		"url": "https://github.com/social4hyq/bun-pty/issues"
 	},
 	"author": {
 		"name": "Dilip Thapa",
